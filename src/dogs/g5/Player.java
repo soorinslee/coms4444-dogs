@@ -131,7 +131,7 @@ public class Player extends dogs.sim.Player {
 			case PAIR_THROWING:
 				if (threeCollabEngaged && threeReady())
 					state = State.THREE_SEPARATE;
-				else if (round > 500) {
+				else if (round > 250) {
 					state = State.DIAGONAL;
 				}
 				else
