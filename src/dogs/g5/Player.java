@@ -79,6 +79,8 @@ public class Player extends dogs.sim.Player {
 		List<Dog> waitingDogs = getWaitingDogs(myOwner, otherOwners);
 
 		System.out.println("current owner: " + myOwner.getNameAsString());
+		System.out.println("clone order isss " + cloneOrder);
+		System.out.println("state issss " + state);
 
 		switch (state){
 			case FIRST_ROUND:
@@ -129,6 +131,9 @@ public class Player extends dogs.sim.Player {
 			case PAIR_THROWING:
 				if (threeCollabEngaged && threeReady())
 					state = State.THREE_SEPARATE;
+				else if (round > 500) {
+					state = State.DIAGONAL;
+				}
 				else
 					checkClonePartnersStatus(State.PAIR_THROWING);
 
@@ -152,11 +157,102 @@ public class Player extends dogs.sim.Player {
 				if(waitingDogs.size() > 0)
 					throwToSelf(directive, myOwner, waitingDogs);
 
+			case DIAGONAL:
+				checkClonePartnersStatus(State.PAIR_THROWING);
+				System.out.println("cloneOrder is" + cloneOrder);
+				System.out.println("in diag, currentpartners is " + currentPartners);
+
+				//to solve a bug where cloneOrder 1 doesn't have any neighbors
+				if(currentPartners.size() == 0 && cloneOrder == 1) {
+					System.out.println("adding for 1");
+					currentPartners.add(clonesPresent.get(1));
+				}
+
+				//if not added already and will have a diagonal, add a diagonal path to the cloneOrder + 1 instance
+				System.out.println("before if");
+				if(cloneOrder % 10 != 1 && cloneOrder < clonesPresent.size() - 1 && currentPartners.size() < 2) {
+					currentPartners.add(clonesPresent.get(cloneOrder));/*clone that corresponds to cloneOrder + 1*/
+				}
+				System.out.println("after if");
+				//if two options, choose least busy one
+				if(currentPartners.size() > 1) {
+					System.out.println("heree :" + currentPartners);
+
+					String owner1Str = currentPartners.get(0);
+					String owner2Str = currentPartners.get(1);
+
+					System.out.println("here2");
+
+					//name to owner
+					Owner owner1 = findOwner(owner1Str, otherOwners);
+					Owner owner2 = findOwner(owner2Str, otherOwners);
+
+					System.out.println("ehre3");
+
+					int waiting1 = getWaitingDogsOther(owner1, myOwner, otherOwners);
+					int waiting2 = getWaitingDogsOther(owner2, myOwner, otherOwners);
+
+					System.out.println("owner1 has " + waiting1);
+					System.out.println("owner2 has " + waiting2);
+
+					System.out.println("here4");
+
+					if(waiting1 < waiting2) {
+						setThrowLocation(directive, waitingDogs, myOwner, owner1);
+					}
+					else {
+						setThrowLocation(directive, waitingDogs, myOwner, owner2);
+					}
+
+
+				}
+				else {
+					System.out.println("in else, making directive");
+					System.out.println("curr partners is " + currentPartners);
+					setThrowLocation(directive, waitingDogs, myOwner, pickReceivingClone(otherOwners));
+					System.out.println("done with directive");
+				}
+
 		}
 
 		saveConversation(round, myOwner, otherOwners);
 
 		return directive;
+	}
+
+	private int getWaitingDogsOther(Owner otherOwn, Owner myOwner, List<Owner> otherOwners) {
+		Set<Dog> waitingDogs = new HashSet<>();
+
+		for(Dog dog : otherOwn.getDogs()) 
+			if(dog.isWaitingForItsOwner() && dog.getExerciseTimeRemaining() > 0.0)
+				waitingDogs.add(dog);
+	
+		for(Dog dog : myOwner.getDogs()) 
+			if(dog.isWaitingForOwner(otherOwn) && dog.getExerciseTimeRemaining() > 0.0)
+				waitingDogs.add(dog);		
+		
+
+		for(Owner otherOwner : otherOwners)
+			for(Dog dog : otherOwner.getDogs()){
+				if(dog.isWaitingForOwner(otherOwn)){
+					waitingDogs.add(dog);
+				}
+			}
+	
+		return waitingDogs.size();
+	}
+
+	private Owner findOwner(String str, List<Owner> otherOwners) {
+		System.out.println("looping");
+		System.out.println("looking for " + str);
+		for(Owner otherOwner: otherOwners) {
+			System.out.println("otherowner is " + otherOwner.getNameAsString());
+			if(otherOwner.getNameAsString().equals(str)) {
+				return otherOwner;
+			}
+		}
+		System.out.println("returning null");
+		return null;
 	}
 
 	private boolean checkNewRow(Owner myOwner, List<Owner> otherOwners){
@@ -692,6 +788,7 @@ public class Player extends dogs.sim.Player {
 		NEW_ROW_THROWING,
 		SELF_THROWING,
 		PAIR_THROWING,
-		THREE_SEPARATE;
+		THREE_SEPARATE,
+		DIAGONAL;
 	}
 }
